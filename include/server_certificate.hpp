@@ -24,6 +24,7 @@
     depending on your environment Please see the documentation
     accompanying the Beast certificate for more details.
 */
+
 inline
 void
 load_server_certificate(boost::asio::ssl::context& ctx)
@@ -44,12 +45,11 @@ load_server_certificate(boost::asio::ssl::context& ctx)
 
     ctx.set_options(
         boost::asio::ssl::context::default_workarounds |
-        boost::asio::ssl::context::no_sslv2 |
-        boost::asio::ssl::context::single_dh_use);
+        boost::asio::ssl::context::no_sslv2);
 
-    ctx.use_certificate_chain_file("ca.crt");
+    ctx.use_certificate_chain_file("/Users/aleks/Desktop/myproxy/certs/cert.crt");
 
-    ctx.use_rsa_private_key_file("ca.key", boost::asio::ssl::context::pem);
+    ctx.use_rsa_private_key_file("/Users/aleks/Desktop/myproxy/certs/cert.key", boost::asio::ssl::context::pem);
 }
 
 #endif
