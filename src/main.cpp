@@ -1,5 +1,6 @@
 #include "server_certificate.hpp"
 #include "make_request.hpp"
+#include "generate_cert.hpp"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -87,6 +88,7 @@ int process_request(T& stream) {
     send_lambda<T> lambda{stream, close, ec};
     for(;;)
     {
+            
         // Read a request
         http::request<http::string_body> req;
         http::read(stream, buffer, req, ec);
@@ -134,7 +136,11 @@ void do_session(tcp::socket& socket) {
     // This means we've got http request
     if (proxy_request.at(http::field::host).to_string().find(":") == std::string::npos) {
         std::cout << "http request" << std::endl;
+        return;
     }
+
+    std::string host = proxy_request.at(http::field::host).to_string().substr(0, proxy_request.at(http::field::host).to_string().length() - 4);
+    std::cout << host << std::endl;
 
     boost::asio::write(
         socket, 
@@ -147,8 +153,15 @@ void do_session(tcp::socket& socket) {
     }
 
     // Generate for each socket individual certificate
+    std::string cert_path = generate_cert(host);
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(100ms); // We need this to wait cert generate
     ssl::context ctx{ssl::context::tlsv12};
-    load_server_certificate(ctx);
+    load_server_certificate(
+        ctx, 
+        cert_path,
+        "/Users/aleks/Desktop/myproxy/certs/localhost.key"
+    );
 
     // Construct the stream around the socket
     beast::ssl_stream<tcp::socket&> stream{socket, ctx};
@@ -191,10 +204,6 @@ int main(int argc, char* argv[])
 
         // The io_context is required for all I/O
         net::io_context ioc{1};
-
-        // The SSL context is required, and holds certificates
-        ssl::context ctx{ssl::context::tlsv12};
-        load_server_certificate(ctx);
 
         // This holds the self-signed certificate used by the server
         // The acceptor receives incoming connections
