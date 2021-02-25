@@ -23,6 +23,7 @@ namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+using namespace std::chrono_literals;
 
 // This function produces an HTTP response for the given
 // request. The type of the response object depends on the
@@ -49,8 +50,7 @@ void fail(beast::error_code ec, char const* what) {
 // This is the C++11 equivalent of a generic lambda.
 // The function object is used to send an HTTP message.
 template<class Stream>
-struct send_lambda
-{
+struct send_lambda {
     Stream& stream_;
     bool& close_;
     beast::error_code& ec_;
@@ -86,17 +86,16 @@ int process_request(T& stream) {
 
     // This lambda is used to send messages
     send_lambda<T> lambda{stream, close, ec};
-    for(;;)
-    {
+    for(;;) {
             
         // Read a request
         http::request<http::string_body> req;
         http::read(stream, buffer, req, ec);
 
-        if(ec == http::error::end_of_stream) {
+        if (ec == http::error::end_of_stream) {
             break;
         }
-        if(ec) {
+        if (ec) {
             fail(ec, "read");
             return FAIL;
         }
@@ -104,12 +103,11 @@ int process_request(T& stream) {
         // Send the response
         handle_request(std::move(req), lambda);
 
-        if(ec) {
+        if (ec) {
             fail(ec, "write");
             return FAIL;
         }
-        if(close)
-        {
+        if (close) {
             // This means we should close the connection, usually because
             // the response indicated the "Connection: close" semantic.
             break;
@@ -133,18 +131,24 @@ void do_session(tcp::socket& socket) {
         return fail(ec, "init-read");
     }
 
+    auto pos = proxy_request.at(http::field::host).to_string().find(":");
     // This means we've got http request
-    if (proxy_request.at(http::field::host).to_string().find(":") == std::string::npos) {
+    if (pos == std::string::npos) {
         std::cout << "http request" << std::endl;
         return;
     }
 
-    std::string host = proxy_request.at(http::field::host).to_string().substr(0, proxy_request.at(http::field::host).to_string().length() - 4);
+    std::string host = proxy_request.at(http::field::host).to_string().substr(0, pos);
     std::cout << host << std::endl;
 
     boost::asio::write(
         socket, 
-        boost::asio::buffer(std::string("HTTP/1.0 200 Connection established\r\nProxy-agent: node.js-proxy\r\n\r\n")), 
+        boost::asio::buffer(
+            std::string(
+                "HTTP/1.0 200 Connection established\r\n"
+                "Proxy-agent: node.js-proxy\r\n\r\n"
+            )
+        ), 
         ec
     );
 
@@ -154,8 +158,8 @@ void do_session(tcp::socket& socket) {
 
     // Generate for each socket individual certificate
     std::string cert_path = generate_cert(host);
-    using namespace std::chrono_literals;
     std::this_thread::sleep_for(100ms); // We need this to wait cert generate
+    std::cout << cert_path << std::endl;
     ssl::context ctx{ssl::context::tlsv12};
     load_server_certificate(
         ctx, 
@@ -169,8 +173,9 @@ void do_session(tcp::socket& socket) {
     // Perform the SSL handshake
     stream.handshake(ssl::stream_base::server, ec);
 
-    if(ec)
+    if (ec) {
         return fail(ec, "handshake");
+    }
 
     if (process_request(stream)) {
         return;
@@ -178,8 +183,9 @@ void do_session(tcp::socket& socket) {
 
     // Perform the SSL shutdown
     stream.shutdown(ec);
-    if(ec)
+    if (ec) {
         return fail(ec, "shutdown");
+    }
 
     // At this point the connection is closed gracefully
 }
