@@ -1,6 +1,7 @@
 #include "server_certificate.hpp"
 #include "make_request.hpp"
 #include "generate_cert.hpp"
+#include "make_http_request.hpp"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -39,6 +40,18 @@ void handle_request(
     // std::cout << response << std::endl;
     return send(std::move(response));
 }
+
+template<class Body, class Allocator, class Send>
+void handle_http_request(
+            http::request<Body, http::basic_fields<Allocator>>&& req,
+            Send&& send) {   
+
+    // std::cout << req << std::endl;
+    auto response = make_http_request(std::move(req));
+    // std::cout << response << std::endl;
+    return send(std::move(response));
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -98,7 +111,7 @@ int process_request(T& stream) {
         if (ec) {
             fail(ec, "read");
             return FAIL;
-        }
+        } 
 
         // Send the response
         handle_request(std::move(req), lambda);
@@ -119,72 +132,111 @@ int process_request(T& stream) {
 
 // Handles an HTTP server connection
 void do_session(tcp::socket& socket) {
-    beast::error_code ec;
+    try {
+        beast::error_code ec;
+        beast::flat_buffer tmp_buffer;
+        http::request<http::string_body> proxy_request;
 
-    beast::flat_buffer tmp_buffer;
-    http::request<http::string_body> proxy_request;
+        // We need this to catch https proxy request
+        http::read(socket, tmp_buffer, proxy_request, ec);
 
-    // We need this to catch https proxy request
-    http::read(socket, tmp_buffer, proxy_request, ec);
+        if (ec) {
+            return fail(ec, "init-read");
+        }
 
-    if (ec) {
-        return fail(ec, "init-read");
-    }
+        std::cout << proxy_request.method_string() << std::endl;
+        // This means we've got http request
+        if (proxy_request.method_string() != "CONNECT") {
+            bool close = false;
+            send_lambda<tcp::socket&> lambda{socket, close, ec};
+            for(;;) { 
+                // Send the response
+                handle_http_request(std::move(proxy_request), lambda);
 
-    auto pos = proxy_request.at(http::field::host).to_string().find(":");
-    // This means we've got http request
-    if (pos == std::string::npos) {
-        std::cout << "http request" << std::endl;
-        return;
-    }
+                if (ec) {
+                    fail(ec, "write");
+                    return;
+                }
+                if (close) {
+                    // This means we should close the connection, usually because
+                    // the response indicated the "Connection: close" semantic.
+                    break;
+                }
 
-    std::string host = proxy_request.at(http::field::host).to_string().substr(0, pos);
-    std::cout << host << std::endl;
+                // Read a request
+                http::read(socket, tmp_buffer, proxy_request, ec);
 
-    boost::asio::write(
-        socket, 
-        boost::asio::buffer(
-            std::string(
-                "HTTP/1.0 200 Connection established\r\n"
-                "Proxy-agent: node.js-proxy\r\n\r\n"
-            )
-        ), 
-        ec
-    );
+                if (ec == http::error::end_of_stream) {
+                    break;
+                }
+                if (ec) {
+                    fail(ec, "read");
+                    return;
+                }
+            }
+        }
 
-    if(ec) {
-        return fail(ec, "init-write");
-    }
+        std::string host = proxy_request.at(http::field::host).to_string();
+        size_t pos = host.find(":");
+        if (pos != std::string::npos) {
+            host = host.substr(0, pos);
+        }
+        std::cout << host << std::endl;
 
-    // Generate for each socket individual certificate
-    std::string cert_path = generate_cert(host);
-    std::this_thread::sleep_for(100ms); // We need this to wait cert generate
-    std::cout << cert_path << std::endl;
-    ssl::context ctx{ssl::context::tlsv12};
-    load_server_certificate(
-        ctx, 
-        cert_path,
-        "/Users/aleks/Desktop/myproxy/certs/localhost.key"
-    );
+        boost::asio::write(
+            socket, 
+            boost::asio::buffer(
+                std::string(
+                    "HTTP/1.0 200 Connection established\r\n"
+                    "Proxy-agent: node.js-proxy\r\n\r\n"
+                )
+            ), 
+            ec
+        );
 
-    // Construct the stream around the socket
-    beast::ssl_stream<tcp::socket&> stream{socket, ctx};
+        if(ec) {
+            return fail(ec, "init-write");
+        }
 
-    // Perform the SSL handshake
-    stream.handshake(ssl::stream_base::server, ec);
+        // Generate for each socket individual certificate
+        std::string cert_path = generate_cert(host);
+        std::cout << cert_path << std::endl;
+        ssl::context ctx{ssl::context::tlsv12};
+        while (true) {  // We need this to wait cert generate
+            try {
+                load_server_certificate(
+                    ctx, 
+                    cert_path,
+                    "/Users/aleks/Desktop/myproxy/certs/localhost.key"
+                );
+                break;
+            } catch (std::exception& e) {
+                std::cerr << "Exception: " << e.what() << std::endl;
+                std::this_thread::sleep_for(100ms);
+            }
+        }
 
-    if (ec) {
-        return fail(ec, "handshake");
-    }
+        // Construct the stream around the socket
+        beast::ssl_stream<tcp::socket&> stream{socket, ctx};
 
-    if (process_request(stream)) {
-        return;
-    }
+        // Perform the SSL handshake
+        stream.handshake(ssl::stream_base::server, ec);
 
-    // Perform the SSL shutdown
-    stream.shutdown(ec);
-    if (ec) {
-        return fail(ec, "shutdown");
+        if (ec) {
+            return fail(ec, "handshake");
+        }
+
+        if (process_request(stream)) {
+            return;
+        }
+
+        // Perform the SSL shutdown
+        stream.shutdown(ec);
+        if (ec) {
+            return fail(ec, "shutdown");
+        }
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
     }
 
     // At this point the connection is closed gracefully
