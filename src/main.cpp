@@ -10,14 +10,21 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/config.hpp>
+#include <openssl/sha.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
+#include <sstream>
+#include <fstream>
+
+namespace fs = std::filesystem;
 
 #define FAIL 1
 #define OK 0
+#define REQUESTS_PATH "/Users/aleks/Desktop/myproxy/requests"
+#define PRIVATE_KEY_PATH "/Users/aleks/Desktop/myproxy/certs/localhost.key"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -25,6 +32,22 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 using namespace std::chrono_literals;
+using namespace std::chrono;
+
+
+std::string sha256(const std::string& str) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, str.c_str(), str.size());
+    SHA256_Final(hash, &sha256);
+    std::stringstream ss;
+    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
 
 // This function produces an HTTP response for the given
 // request. The type of the response object depends on the
@@ -33,9 +56,25 @@ using namespace std::chrono_literals;
 template<class Body, class Allocator, class Send>
 void handle_request(
             http::request<Body, http::basic_fields<Allocator>>&& req,
-            Send&& send) {   
+            Send&& send) {  
 
-    // std::cout << req << std::endl;
+    std::stringstream req_convert;
+    req_convert << req;
+
+    std::stringstream ss;
+    time_t now = time(0);
+    char* date_time = ctime(&now);
+    ss
+        << req.method_string()
+        << req.at(http::field::host)
+        // << req.target() << " " 
+        << "HTTP" << req.version() / 10 << "." << req.version() % 10
+        << date_time 
+        << sha256(req_convert.str());
+
+    fs::current_path(REQUESTS_PATH);
+    std::ofstream outfile(ss.str());
+    outfile << req;
     auto response = make_request(std::move(req));
     // std::cout << response << std::endl;
     return send(std::move(response));
@@ -45,8 +84,22 @@ template<class Body, class Allocator, class Send>
 void handle_http_request(
             http::request<Body, http::basic_fields<Allocator>>&& req,
             Send&& send) {   
+    std::stringstream req_convert;
+    req_convert << req;
 
-    // std::cout << req << std::endl;
+    std::stringstream ss;
+    time_t now = time(0);
+    char* date_time = ctime(&now);
+    ss 
+        << req.method_string()
+        << req.at(http::field::host)
+        << "HTTP" << req.version() / 10 << "." << req.version() % 10
+        << date_time << sha256(req_convert.str());
+
+    fs::current_path(REQUESTS_PATH);
+    std::fstream outfile(ss.str());
+    outfile << req;
+
     auto response = make_http_request(std::move(req));
     // std::cout << response << std::endl;
     return send(std::move(response));
@@ -144,7 +197,6 @@ void do_session(tcp::socket& socket) {
             return fail(ec, "init-read");
         }
 
-        std::cout << proxy_request.method_string() << std::endl;
         // This means we've got http request
         if (proxy_request.method_string() != "CONNECT") {
             bool close = false;
@@ -160,14 +212,14 @@ void do_session(tcp::socket& socket) {
                 if (close) {
                     // This means we should close the connection, usually because
                     // the response indicated the "Connection: close" semantic.
-                    break;
+                    return;
                 }
 
                 // Read a request
                 http::read(socket, tmp_buffer, proxy_request, ec);
 
                 if (ec == http::error::end_of_stream) {
-                    break;
+                    return;
                 }
                 if (ec) {
                     fail(ec, "read");
@@ -200,14 +252,13 @@ void do_session(tcp::socket& socket) {
 
         // Generate for each socket individual certificate
         std::string cert_path = generate_cert(host);
-        std::cout << cert_path << std::endl;
         ssl::context ctx{ssl::context::tlsv12};
         while (true) {  // We need this to wait cert generate
             try {
                 load_server_certificate(
                     ctx, 
                     cert_path,
-                    "/Users/aleks/Desktop/myproxy/certs/localhost.key"
+                    PRIVATE_KEY_PATH
                 );
                 break;
             } catch (std::exception& e) {
@@ -244,13 +295,11 @@ void do_session(tcp::socket& socket) {
 
 //------------------------------------------------------------------------------
 
-int main(int argc, char* argv[])
-{
-    try
-    {
+int main(int argc, char* argv[]) {
+    std::filesystem::create_directory(REQUESTS_PATH);
+    try {
         // Check command line arguments.
-        if (argc != 4)
-        {
+        if (argc != 4) {
             std::cerr <<
                 "Usage: http-server-sync-ssl <address> <port> <doc_root>\n" <<
                 "Example:\n" <<
@@ -266,8 +315,7 @@ int main(int argc, char* argv[])
         // This holds the self-signed certificate used by the server
         // The acceptor receives incoming connections
         tcp::acceptor acceptor{ioc, {address, port}};
-        for(;;)
-        {
+        for(;;) {
             // This will receive the new connection
             tcp::socket socket{ioc};
 
@@ -280,8 +328,7 @@ int main(int argc, char* argv[])
                 std::move(socket))}.detach();
         }
     }
-    catch (const std::exception& e)
-    {
+    catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }

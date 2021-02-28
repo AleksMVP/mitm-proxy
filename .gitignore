@@ -1,3 +1,5 @@
 .vscode
 build
 certs/certs/
+node/modules
+requests/
