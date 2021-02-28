@@ -93,7 +93,7 @@ if "Content-Type" in request.headers.keys() and \
         for i in generate_xss_dict(parsed_body_parameters):
             query_string = urlencode(i)
             new_request = request_str.replace(
-                parsed_url.query, 
+                request_body, 
                 unquote(query_string)
             )
             response = make_https_request(host, new_request)
