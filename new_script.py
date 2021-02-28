@@ -7,8 +7,6 @@ from urllib.parse import unquote
 import socket, ssl, pprint
 from io import BytesIO
 
-#  python code by Senior Python Developer
-
 XSS = "'\"><img src=\"\" onerror=alert(\"aye\")>"
 FILE_PATH = "/Users/aleks/Desktop/myproxy/requests/POSTauth.mail.ruHTTP1.1Sun Feb 28 12:21:08 2021\nade2c2319d1dd7db0fca27fa5bfa9959677b1da531a0eb9e174fdbe3e66c3671"
 
@@ -21,7 +19,7 @@ def make_https_request(host, data):
         data = ssl_sock.recv(1024)
 
     return data.decode()
-    # print('Received', data.decode())
+
 
 def make_http_request(host, data):
     port = 80
@@ -32,12 +30,12 @@ def make_http_request(host, data):
         data = ssl_sock.recv(1024)
 
     return data.decode()
-    #print('Received', repr(data))
 
 
 def prepare_query(query_array):
     for key in query_array.keys():
         query_array[key] = query_array[key][0]
+
 
 def generate_xss_dict(query_array):
     for key in query_array.keys():
@@ -58,15 +56,18 @@ class HTTPRequest(BaseHTTPRequestHandler):
         self.error_code = code
         self.error_message = message
 
+
 request_str = ""  # we don't really need this because it's python but ...
 with open(FILE_PATH, "r") as f:
     request_lines = f.readlines()
     request_str = "".join(request_lines)
 
+
 request = HTTPRequest(request_str.encode())
 host = request.headers["Host"]
 parsed_url = urlparse(request.path)
 parsed_query = parse_qs(parsed_url.query)
+
 
 if parsed_query:
     prepare_query(parsed_query)
@@ -76,7 +77,9 @@ if parsed_query:
         response = make_https_request(host, new_request)
         if response.find(XSS) != -1:
             print(i)
+
     print(parsed_query)
+
 
 if "Content-Type" in request.headers.keys() and \
             request.headers["Content-Type"] == "application/x-www-form-urlencoded":
@@ -100,6 +103,5 @@ if "Content-Type" in request.headers.keys() and \
     print(parsed_body_parameters)
 
 print(request.headers["Host"])
-print(request.headers["Referer"])
 print(make_https_request(host, request_str))
 
