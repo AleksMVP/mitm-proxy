@@ -23,6 +23,7 @@ auto make_http_request(http::request<http::string_body>&& request) {
     std::string host = request.at(http::field::host).to_string();
     std::string port = "80";
     auto pos = host.find(":");
+    // port detect
     if (pos != std::string::npos) {
         port = host.substr(pos + 1, host.length());
         host = host.substr(0, pos);
@@ -30,6 +31,8 @@ auto make_http_request(http::request<http::string_body>&& request) {
 
     request.erase(http::field::proxy_connection);
 
+
+    // http://mail.ru/news/ -> /news/
     std::string target(request.target());
     int i = 0;
     for (int j = 0; i < target.length(); i++) {

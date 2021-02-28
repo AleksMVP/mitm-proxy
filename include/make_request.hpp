@@ -24,6 +24,7 @@ auto make_request(http::request<http::string_body>&& request) {
     std::string host = request.at(http::field::host).to_string();
     std::string port = "443";
     auto pos = host.find(":");
+    // port detect
     if (pos != std::string::npos) {
         port = host.substr(pos + 1, host.length());
         host = host.substr(0, pos);
