@@ -7,7 +7,7 @@ from urllib.parse import unquote
 import socket, ssl, pprint
 from io import BytesIO
 
-XSS = "'\"><img src=\"\" onerror=alert(\"aye\")>"
+XSS = "'\"><img src=\"\" onerror=alert(\"\")>"
 FILE_PATH = "/Users/aleks/Desktop/myproxy/requests/POSTauth.mail.ruHTTP1.1Sun Feb 28 12:21:08 2021\nade2c2319d1dd7db0fca27fa5bfa9959677b1da531a0eb9e174fdbe3e66c3671"
 
 def make_https_request(host, data):
@@ -97,7 +97,7 @@ if "Content-Type" in request.headers.keys() and \
                 unquote(query_string)
             )
             response = make_https_request(host, new_request)
-            if response.find(XSS):
+            if response.find(XSS) != -1:
                 print(i)
 
     print(parsed_body_parameters)
