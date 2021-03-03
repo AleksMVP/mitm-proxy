@@ -19,7 +19,6 @@
 #include <sstream>
 #include <fstream>
 
-
 #define FAIL 1
 #define OK 0
 #define CERT_GENERATE_LOAD_LIMIT 100
@@ -91,11 +90,10 @@ void handle_http_request(
     std::stringstream ss;
     time_t now = time(0);
     char* date_time = ctime(&now);
-    ss 
-        << req.method_string()
-        << req.at(http::field::host)
-        << "HTTP" << req.version() / 10 << "." << req.version() % 10
-        << date_time << sha256(req_convert.str());
+    ss << req.method_string()
+       << req.at(http::field::host)
+       << "HTTP" << req.version() / 10 << "." << req.version() % 10
+       << date_time << sha256(req_convert.str());
 
     fs::current_path(REQUESTS_PATH);
     std::fstream outfile(ss.str());

@@ -52,7 +52,6 @@ std::string generate_cert(const std::string& domain_name) {
         size_t pos = path_string.rfind("/");
         if (fs::is_directory(path) && 
                 path_string.substr(pos + 1, path_string.length()) == domain_name) {
-
             return build_path(crt_dirpath, domain_name, CRT_FILENAME);
         }
     }
@@ -67,7 +66,7 @@ std::string generate_cert(const std::string& domain_name) {
     }
     std::string command = build_path_command(crt_dirpath, domain_name);
 
-    int a = std::system(command.c_str());
+    int _ = std::system(command.c_str());
 
     return build_path(crt_dirpath, domain_name, CRT_FILENAME);
 }
