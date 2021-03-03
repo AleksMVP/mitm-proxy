@@ -19,18 +19,19 @@
 #include <sstream>
 #include <fstream>
 
-namespace fs = std::filesystem;
 
 #define FAIL 1
 #define OK 0
+#define CERT_GENERATE_LOAD_LIMIT 100
 #define REQUESTS_PATH "/Users/aleks/Desktop/myproxy/requests"
 #define PRIVATE_KEY_PATH "/Users/aleks/Desktop/myproxy/certs/localhost.key"
 
+namespace fs = std::filesystem;
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 using namespace std::chrono_literals;
 using namespace std::chrono;
 
@@ -253,8 +254,10 @@ void do_session(tcp::socket& socket) {
         // Generate for each socket individual certificate
         std::string cert_path = generate_cert(host);
         ssl::context ctx{ssl::context::tlsv12};
+        int count = 0;
         while (true) {  // We need this to wait cert generate
             try {
+                count++;
                 load_server_certificate(
                     ctx, 
                     cert_path,
@@ -262,6 +265,10 @@ void do_session(tcp::socket& socket) {
                 );
                 break;
             } catch (std::exception& e) {
+                if (count > CERT_GENERATE_LOAD_LIMIT) {
+                    std::cerr << "Exception: Certificate load limit" << std::endl;
+                    throw e;
+                }
                 std::cerr << "Exception: " << e.what() << std::endl;
                 std::this_thread::sleep_for(100ms);
             }

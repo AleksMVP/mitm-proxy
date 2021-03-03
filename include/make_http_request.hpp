@@ -31,7 +31,6 @@ auto make_http_request(http::request<http::string_body>&& request) {
 
     request.erase(http::field::proxy_connection);
 
-
     // http://mail.ru/news/ -> /news/
     std::string target(request.target());
     int i = 0;
