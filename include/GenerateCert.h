@@ -16,8 +16,6 @@
 
 namespace fs = std::filesystem;
 
-std::mutex mut;
-
 std::string build_path(const std::string& crt_dirpath,
                          const std::string& domain_name, 
                            const std::string& crt_filename) {
@@ -40,6 +38,8 @@ std::string build_path_command(const std::string& crt_dirpath,
 
     return ss.str();
 }
+
+std::mutex mut;
 
 std::string generate_cert(const std::string& domain_name) {
     std::lock_guard<std::mutex> m(mut);
