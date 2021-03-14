@@ -1,8 +1,8 @@
 ### Mac OS build
 
 ```
-git clone https://github.com/AleksMVP/myproxy.git
-cd myproxy
+git clone https://github.com/AleksMVP/mitm-proxy.git
+cd mitm-proxy
 sh gen.sh
 mkdir build
 cd build
@@ -12,8 +12,8 @@ make
 
 ### Ubunty build
 ```
-git clone https://github.com/AleksMVP/myproxy.git
-cd myproxy
+git clone https://github.com/AleksMVP/mitm-proxy.git
+cd mitm-proxy
 sh gen.sh
 mkdir build
 cd build
@@ -25,8 +25,8 @@ make
 
 ### Docker build
 ```
-git clone https://github.com/AleksMVP/myproxy.git
-cd myproxy
+git clone https://github.com/AleksMVP/mitm-proxy.git
+cd mitm-proxy
 docker build -t boberproxy .
 docker run -p 7888:7888 boberproxy
 ```
