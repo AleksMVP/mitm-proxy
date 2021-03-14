@@ -9,8 +9,8 @@
 
 namespace fs = std::filesystem;
 
-const fs::path RESOLVE_PATH = "/Users/aleks/Desktop/tp-thirdsem/myproxy/requests";
-const fs::path CERTS_PATH = "/Users/aleks/Desktop/tp-thirdsem/myproxy/certs";
+const fs::path RESOLVE_PATH = "../requests";
+const fs::path CERTS_PATH = "../certs";
 
 const int QUEUE_SIZE = 1000;
 const int THREADS_NUMBER = 100;

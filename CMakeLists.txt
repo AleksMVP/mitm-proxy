@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.13)
 
 project(MyProject)
 
@@ -16,4 +16,4 @@ find_package(Boost REQUIRED system)
 find_package(OpenSSL REQUIRED)
 
 add_executable(MyProject src/main.cpp src/Client.cpp)
-target_link_libraries (MyProject -pthread -lboost_coroutine -lboost_chrono -lboost_thread-mt -lboost_system OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries (MyProject -pthread -lboost_coroutine -lboost_chrono -lboost_thread -lboost_system OpenSSL::SSL OpenSSL::Crypto)
