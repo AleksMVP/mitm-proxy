@@ -48,11 +48,14 @@ template<class Body, class Allocator>
 void HTTPSHandler<T>::handle(T&& client, 
                             const http::request<Body, http::basic_fields<Allocator>>& request) {
     std::string host = parse_host(request);
-    std::cout << host << std::endl;
+
+    std::cout << "Host: " << host << std::endl;
+
+    std::cout << "---------------request----------------" << std::endl;
     std::cout << request << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
 
     beast::error_code ec;
-
     boost::asio::write(
         client.get_socket(), 
         boost::asio::buffer(
