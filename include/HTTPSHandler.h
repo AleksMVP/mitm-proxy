@@ -141,12 +141,8 @@ void HTTPSHandler<T>::save_request(const http::request<Body, http::basic_fields<
     req_convert << req;
 
     std::stringstream ss;
-    time_t now = time(0);
-    char* date_time = ctime(&now);
     ss  << req.method_string()
         << req.at(http::field::host)
-        << "HTTP" << req.version() / 10 << "." << req.version() % 10
-        << date_time 
         << sha256(req_convert.str());
 
     fs::current_path(resolve_path);

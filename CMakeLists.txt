@@ -16,4 +16,10 @@ find_package(Boost REQUIRED system)
 find_package(OpenSSL REQUIRED)
 
 add_executable(MyProject src/main.cpp src/Client.cpp)
+if (APPLE)
+    target_link_libraries (MyProject -pthread -lboost_coroutine -lboost_chrono -lboost_thread-mt -lboost_system OpenSSL::SSL OpenSSL::Crypto)
+endif ()
+
+if (UNIX AND NOT APPLE)
 target_link_libraries (MyProject -pthread -lboost_coroutine -lboost_chrono -lboost_thread -lboost_system OpenSSL::SSL OpenSSL::Crypto)
+endif ()
