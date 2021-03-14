@@ -141,9 +141,9 @@ void HTTPSHandler<T>::save_request(const http::request<Body, http::basic_fields<
     req_convert << req;
 
     std::stringstream ss;
-    ss  << req.method_string()
-        << req.at(http::field::host)
-        << sha256(req_convert.str());
+    ss << req.method_string()
+       << req.at(http::field::host)
+       << sha256(req_convert.str());
 
     fs::current_path(resolve_path);
     std::ofstream outfile(ss.str());

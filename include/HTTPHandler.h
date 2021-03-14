@@ -98,7 +98,7 @@ void HTTPHandler<T>::save_request(const http::request<Body, http::basic_fields<A
        << sha256(req_convert.str());
 
     fs::current_path(resolve_path);
-    std::fstream outfile(ss.str());
+    std::ofstream outfile(ss.str());
     outfile << req;
 }
 
