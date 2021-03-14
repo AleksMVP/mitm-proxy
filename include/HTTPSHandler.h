@@ -3,7 +3,6 @@
 #include "Utils.h"
 #include "MakeHTTPSRequest.h"
 #include "LoadCertificate.h"
-#include "GenerateCert.h"
 
 #include <thread>
 
@@ -20,7 +19,7 @@ using namespace std::chrono;
 template <typename T>
 class HTTPSHandler {
  public:
-    explicit HTTPSHandler(const fs::path& path, const fs::path& private_key_path);
+    explicit HTTPSHandler(const fs::path& path, const fs::path& main_dirpath);
 
     template<class Body, class Allocator>
     void handle(T&& client, 
@@ -36,13 +35,13 @@ class HTTPSHandler {
     void save_request(const http::request<Body, http::basic_fields<Allocator>>& req);
  private:
     fs::path resolve_path;
-    fs::path private_key_path;
+    fs::path main_dirpath;
 };
 
 template <typename T>
-HTTPSHandler<T>::HTTPSHandler(const fs::path& resolve_path, const fs::path& private_key_path) : 
+HTTPSHandler<T>::HTTPSHandler(const fs::path& resolve_path, const fs::path& main_dirpath) : 
         resolve_path(resolve_path),
-        private_key_path(private_key_path) {}
+        main_dirpath(main_dirpath) {}
 
 template <typename T>
 template<class Body, class Allocator>
@@ -50,6 +49,7 @@ void HTTPSHandler<T>::handle(T&& client,
                             const http::request<Body, http::basic_fields<Allocator>>& request) {
     std::string host = parse_host(request);
     std::cout << host << std::endl;
+    std::cout << request << std::endl;
 
     beast::error_code ec;
 
@@ -69,7 +69,7 @@ void HTTPSHandler<T>::handle(T&& client,
     }
 
     // Generate for each socket individual certificate
-    std::string cert_path = generate_cert(host);
+    std::string cert_path = generate_cert(host, main_dirpath.string());
     ssl::context ctx{ssl::context::tlsv12};
 
     int count = 0;
@@ -79,7 +79,7 @@ void HTTPSHandler<T>::handle(T&& client,
             load_server_certificate(
                 ctx, 
                 cert_path,
-                private_key_path.string()
+                main_dirpath.string()
             );
             break;
         } catch (std::exception& e) {

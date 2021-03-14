@@ -8,14 +8,16 @@ import socket, ssl, pprint
 from io import BytesIO
 
 XSS = "'\"><img src=\"\" onerror=alert(\"\")>"
-FILE_PATH = "/Users/aleks/Desktop/myproxy/requests/POSTauth.mail.ruHTTP1.1Sun Feb 28 12:21:08 2021\nade2c2319d1dd7db0fca27fa5bfa9959677b1da531a0eb9e174fdbe3e66c3671"
+FILE_PATH = "/Users/aleks/Desktop/myproxy/requests/GETmail.ruHTTP1.1Mon Mar  8 18:20:43 2021\n328c57a181a40a1feb8f0135572a05791d54bb83756fadc407523c6a0f654632"
 
 def make_https_request(host, data):
     port = 443
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(10)
         ssl_sock = ssl.wrap_socket(s)
         ssl_sock.connect((host, port))
         ssl_sock.sendall(data.encode())
+
         data = ssl_sock.recv(1024)
 
     return data.decode()
@@ -68,6 +70,7 @@ host = request.headers["Host"]
 parsed_url = urlparse(request.path)
 parsed_query = parse_qs(parsed_url.query)
 
+print(make_https_request(host, request_str))
 
 if parsed_query:
     prepare_query(parsed_query)
@@ -103,5 +106,4 @@ if "Content-Type" in request.headers.keys() and \
     print(parsed_body_parameters)
 
 print(request.headers["Host"])
-print(make_https_request(host, request_str))
 

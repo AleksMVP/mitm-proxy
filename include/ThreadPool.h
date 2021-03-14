@@ -6,6 +6,7 @@
 #include <thread>
 #include <future>
 #include <atomic>
+#include <functional>
 
 template <typename T=std::packaged_task<void(void)>>
 class ThreadPool {

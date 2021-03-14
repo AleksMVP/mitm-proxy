@@ -16,7 +16,7 @@ using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 template <typename T>
 class HTTPHandler : public IHandler<T> {
  public: 
-    HTTPHandler(const fs::path& resolve_path, const fs::path& private_key_path);
+    HTTPHandler(const fs::path& resolve_path, const fs::path& main_dirpath);
     void handle(T&& data) override;
 
  private:
@@ -35,9 +35,9 @@ class HTTPHandler : public IHandler<T> {
 
 
 template <typename T>
-HTTPHandler<T>::HTTPHandler(const fs::path& resolve_path, const fs::path& private_key_path) : 
+HTTPHandler<T>::HTTPHandler(const fs::path& resolve_path, const fs::path& main_dirpath) : 
         resolve_path(resolve_path),
-        https_handler(resolve_path, private_key_path) {}
+        https_handler(resolve_path, main_dirpath) {}
 
 
 template <typename T>
