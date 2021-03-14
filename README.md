@@ -1,4 +1,4 @@
-### Mac OS Build
+### Mac OS build
 
 ```
 git clone https://github.com/AleksMVP/myproxy.git
@@ -10,6 +10,29 @@ cmake .. -DOPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1" -DOPENSSL_LIBRARIES="/u
 make
 ```
 
+### Ubunty build
+```
+git clone https://github.com/AleksMVP/myproxy.git
+cd myproxy
+sh gen.sh
+mkdir build
+cd build
+cmake ..
+make
+```
+
+> For build you need [boost](https://www.boost.org/), [openssl](https://www.openssl.org/)
+
+### Docker build
+```
+git clone https://github.com/AleksMVP/myproxy.git
+cd myproxy
+docker build -t boberproxy .
+docker run -p 7888:7888 boberproxy
+```
+
+
+### Script work example
 ```
 > python3 script.py --filepath requests/FileWithRequest --query --body
 New query params: {'kek': '\'"><img src="" onerror=alert("")>', 'bob': 'fjdjfdkfjdjfdj', 'lol': '434343'}
