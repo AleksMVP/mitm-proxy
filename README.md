@@ -31,6 +31,18 @@ docker build -t boberproxy .
 docker run -p 7888:7888 boberproxy
 ```
 
+### Script usage
+```
+usage: script.py [-h] -f  [-b] [-q]
+
+Search vulnarabilities
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -f, --filepath    path to file with request
+  -b, --body        flag to check body params
+  -q, --query       flag to check query params
+ ```
 
 ### Script work example
 ```
